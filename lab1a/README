@@ -1,0 +1,23 @@
+
+NAME: Haiying Huang
+EMAIL: hhaiying1998@outlook.com
+ID: 804757410
+
+1. Description of included files
+
+lab1a.c: a C source program that implements a character-at-a-time, full duplex terminal and passes input and output between two processes
+	 Support --shell=program and --debug options.
+Makefile: a Makefile that supports three targets default, clean, and dist.
+
+2. Testing methodoly
+   Since lab1a multiplexes inputs and outputs between the terminal and the shell, the testing is complicated.
+   During the final poll, three normal shutdown process (EOF from terminal, EOF or pollerror from shell, receipt of SIGPIPE) 
+   might occur at the same time and in a non-deterministic order. Therefore, we support a --debug feature that
+   if one of these shutdown events occur, we logs a message to stderr such as "eof on stdin", "shell hangup", and "SIGPIPE received"
+   Also, to tell if the program has recognized ^C and ^D from keyboard, we echo a caret and a capital letter to the screen instead of
+   the original character.
+
+3. Reference source
+   To understand noncanonical mode and termnios functions, I refer to https://www.gnu.org/software/libc/manual/html_node/Noncanon-Example.html
+   To understand the program at high level, I refer to TA slides on CCLE  
+   

@@ -1,0 +1,70 @@
+NAME: Haiying Huang
+EMAIL: hhaiying1998@outlook.com
+ID: 804757410
+SLIPDAYS: 1
+
+
+1) Description of included files:
+
+	lab2_add.c: a C source that implements and tests addition to a shared counter and produces correspondent output statistics.
+	SortedList.h: a header file describing the interfaces for Sorted List data structure.
+	SortedList.c: a C source that implements insertion, deletion, lookup, and length methods as declared in SortedList.h
+	lab2_list.c: a C source that implements and tests four methods of a shared Sorted List and produces correspondent output statistics.
+	lab2_add.csv: a text file that contains output statistics of addition tests in csv format.
+	lab2_list.csv: a text file that contains output statistics of Sorted List tests in csv format.
+	lab2_add.gp, lab2_list.gp: provided scripts to generate png plots for test results.
+	Makefile: a Makefile for this program.
+	test.sh: an additional bash script that runs an exhaustive tests for lab2_add and lab2_list
+	README: a text file that describes this program and answers the analysis questions.
+	Lab2_add-1/2/3/4/5.png, Lab2_list-1/2/3/4.png: multiple png files that evaluate and summarize the performance of lab2_add and lab2_list with different options
+
+2) Solutions to analysis questions
+
+2.1.1 - causing conflicts
+Q: Why does it take many iterations before errors are seen?
+   Why does a significantly smaller number of iterations so seldom fail?
+
+A: When number of iterations are small, the execution time of each worker thread is also smaller so that it is more likely to run to completion during its scheduled time slice. In this way, conflicts seldom occur. However, if we increase the number of iterations, a thread is more likely to be preempted while executing the critical section, and errors become more frequently seen.
+
+
+2.1.2 - cost of yielding
+Q: Why are the --yield runs so much slower?
+   Where is the additional time going?
+
+A: When --yield option is specified, each thread is forced to yield immediately and the OS performs a context switch. It runs much slower because the overhead of context switch is very expensive, including trapping into OS, saving the register states of the current thread, loading the register states of the new thread to run, flushing the cache, and so on.
+
+Q: Is it possible to get valid per-operation timings if we are using the --yield option? 
+
+A: Since it is very hard to measure the time cost of context switch, it cannot be easily deducted from the total running time. Another possible approach is to time each single operation such as addition and obtain the average. However, the system call to timer itself might induce additional overhead. Therefore, I think it might not be possible to easily get valid per-operation timings.
+
+2.1.3 - measurement errors
+Q: Why does the average cost per operation drop with increasing iterations?
+   If the cost per iteration is a function of the number of iterations, how do we know how many iterations to run (or what the "correct" cost is)?
+
+A: In the present implementation, we record the time difference between the creation of the first thread and the joining of the last threads. Therefore, a lot of overheads are taken into account such as threads allocation / delocation, and context swich. When the number of iteration increases, these overhead are amortized and their average contribution approaches zero. Theoretically, to find the "true" cost, we can run the test with increasingly larger iterations and observe the convergence of the cost per operation curve.
+
+2.1.4 - costs of serialization
+Q: Why do all of the options perform similarly for low numbers of threads?
+   Why do the three protected operations slow down as the number of threads rises?
+
+A: When number of threads are smaller, each thread is more likely to run to completion before another thread enters the critical section. Therefore, it seldom occurs that other threads have to wait for a single thread to release the lock. However, if we run the test with more threads, we have more memory contention and the average waiting time significantly increases. Second, when the particular thread holding the lock is preempted, it takes much larger time for it to be rescheduled and meanwhile the other threads have to be blocked. 
+
+2.2.1 - scalability of Mutex
+Q: Compare the variation in time per mutex-protected operation vs the number of threads in Part-1 (adds) and Part-2 (sorted lists).
+   Comment on the general shapes of the curves, and explain why they have this shape.
+   Comment on the relative rates of increase and differences in the shapes of the curves, and offer an explanation for these differences.
+
+A: For sorted list test, the time per operation increases linearly with number of threads (at a roughly constant rate). This is expected: when more threads are running concurrently, we have more memory contention so the average waiting time increases correspondently. For addition test, when number of threads increases, the time per operation keeps increasing but the rate of increase tends to be lower. One possible explanation is that the critical section involved in the addition is very small so the "pure" waiting time only contributes to part of the total time per operation. Other overheads such as thread allocation / dellocation are also taken in account. These works can be done in parallel (not included in the critical section), so they do not grow linearly with number of threads.
+
+2.2.2 - scalability of Spin Lock
+Q: Compare the variation in time per protected operation vs the number of threads for list operations protected by Mutex vs Spin locks. 
+   Comment on the general shapes of the curves, and explain why they have this shape.
+   Comment on the relative rates of increase and differences in the shapes of the curves, and offer an explanation for these differences.
+
+A: The general trend we observe is that as the number of threads increases, the time per protected operation keeps increasing. The reason is that when more threads are running concurrently, we have more memory contention so the average waiting time also increases. We expect the greatest rate of increase for the Spin lock, since it keeps checking the lock, which could burn CPU cycles and further delay the release of the lock. For the addition test, we observe that the Compare_and_Swap mechanism is most efficient for the addition test. However, for the Sorted list test, we observe that Spin lock has lower rate of increase than the mutex lock in contradiction to our expectation. One possible explanation is that we use limited number of threads (12) so the advantage of mutex lock is not demonstrated. On the other hand, Spin lock performs better with its simplicity.
+
+
+
+
+
+

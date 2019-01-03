@@ -1,0 +1,335 @@
+<HTML>
+<HEAD>
+<TITLE>Project 4C</TITLE>
+</HEAD>
+<BODY>
+<CENTER>
+<H1>Project 4C<br>
+Internet Of Things Security</H1>
+</CENTER>
+
+<H2>INTRODUCTION:</H2>
+<P>
+The Internet Of Things is populated with an ever expanding
+range of sensors and appliances.  Initially such devices
+were likely to be connected to monitoring and control 
+devices over purely local/personal networks 
+(e.g., infra-red, Bluetooth, ZigBee), but it is
+increasingly common to connect such devices 
+(directly or via a bridge) to the Internet.
+This enables remote monitoring and control, but it also
+exposes them to a variety of remote attacks.
+</P>
+<P>
+For some targets (e.g., a national power grid or 
+uranium separation centrifuges) their strategic importance
+and need for protection should be clear.
+It might not be immediatly obvious how one might hijack simple
+devices (e.g., light switches or temperature/humidity sensors) 
+for nefarious purposes, but:
+<ul>
+   <li> there have been numerous instances where web-cams
+   	have been hijacked to violate peoples' privacy.</li>
+   <li> smart devices like routers, baby-monitors, 
+   	washing machines, and even lightbulbs have been
+	conscripted into <em>botnets</em> to mount 
+	<em>Distributed Denial of Service</em>
+	attacks and to be used for other bad purposes.</li>
+   <li> security researchers have been able to hijack the
+   	digital controls of recent cars.</li>
+   <li> consider the havoc that could be wrought by someone
+   	who was able to seize control of a networked
+	pacemaker or insulin pump.</li>
+</ul>
+Attackers have proven innovative and resourceful in making use of compromised 
+devices of many kinds, so even if you do not see any obvious dangers, prudence suggests that greater care be taken with the security of IOT devices.
+In particular, all communications and control for 
+IOT devices should be encrypted and authenticated.
+</P>
+<P>
+In this project we will extend your
+embedded temperature sensor to accept commands from, and send
+reports back to, a network server.  You will do this over both
+unencrypted and encrypted channels.
+</P>
+
+<H2>RELATION TO READING AND LECTURES:</H2>
+<P>
+This project applies the principles discussed in the reading and lectures on
+Cryptography, Distributed Systems Security, and Secure Socket Layer encryption.
+</P>
+
+<H2>PROJECT OBJECTIVES:</H2>
+<UL>
+    <LI> Primary: Demonstrate the ability to design, build and debug an 
+    	embedded application that interacts with a central control server
+	with the aid of server-side logs.</li>
+    <LI> Primary: Demonstrate the ability to implement a secure channel
+    	using standard tools.</li>
+    <LI> Primary: Demonstrate the ability to research and exploit
+    	a complex API, and to debug an application involving encrypted communication.</li>
+</UL>
+
+<H2>DELIVERABLES:</H2>
+A single compressed tarball (<tt>.tar.gz</tt>) containing:
+<UL>
+    <LI> C source files for two embedded applications 
+	(<tt>lab4c_tcp</tt> and <tt>lab4c_tls</tt>)
+    	that build and run (with no errors or warnings) on a Beaglebone.
+ <!--
+    <LI> a public key <tt>lab4c_server.crt</tt> that your device will use to authenticate
+    	the logging server.</li>
+    -->
+    <li> A <tt>Makefile</tt> to build and test your application.
+	 The higher level targets should include:
+	<ul>
+		<li>default ... build both versions of your program
+	     		    (compiling with the <strong><tt>-Wall</tt></strong> and 
+			    <strong><tt>-Wextra</tt></strong> options).  </li>
+		<li><strong>clean</strong> ... delete all programs and output created by the Makefile
+			and restore the directory to its freshly untarred state.</li>
+		<li><strong>dist</strong> ... create the deliverable tarball.</li>
+	</ul></li>
+    	Note that this <tt>Makefile</tt> is intended to be executed on a Beaglebone, but you
+	may find it convenient to create a <tt>Makefile</tt> that can be run on either a
+	Beaglebone or a Linux server/desktop/notebook.
+    <li> A <tt>README</tt> file containing:
+	<ul>
+		<li> descriptions of each of the included files.</li>
+		<li> any other comments on your submission 
+			that you would like to bring to our attention 
+	 		(e.g., research, limitations, features, testing methodology).</LI>
+	</ul></li>
+</UL>
+
+<H2>PREPARATION:</H2>
+<P>
+<ul>
+   <li>Part 1 
+       <ul>
+       	    <li>Obtain the <a href="serverinfo.html">host name, port # and server status URL</a>
+		for the TCP logging server.</li>
+   	</ul>
+   </li>
+   <li>Part 2
+       <ul>
+       	    <li>Obtain the <a href="serverinfo.html">host name, port # and server status URL</a>
+       	    	for the TLS logging server.</li>
+	   <li>Review the documentation for the
+		<a href="https://www.openssl.org/docs/manmaster/man7/ssl.html">OpenSSL</a> 
+		SSL/TLS library, which should already be installed on your Beaglebone.
+		You will likely want to seek out additional tutorials on using
+		OpenSSL to initiate connections and verify server certificates.
+	   </li>
+   	</ul>
+   </li>
+</ul>
+</P>
+
+<H2>PROJECT DESCRIPTION:</H2>
+<H3>Part 1: Communication with a Logging Server</H3>
+<P>
+Write a program (called <tt>lab4c_tcp</tt>) that:
+<ul>
+   <li> builds and runs on your Beaglebone.</li>
+   <li> is based on the temperature sensor application you built previously 
+        (including the <tt>--period=</tt>, <tt>--scale=</tt> and <tt>--log=</tt> options).
+   </li>
+   <li> accepts the following (mandatory) new parameters:
+   	<ul>
+		<li><tt>--id=</tt><em>9-digit-number</em></li>
+		<li><tt>--host=</tt><em>name or address</em></li>
+		<li><tt>--log=</tt><em>filename</em></li>
+		<li><em>port number</em></li>
+	</ul>
+   	Note that there is no <tt>--port=</tt> in front of the port number.
+	      This is a non-switch parameter.
+   </li>
+   <li> accepts the same commands and generates the same reports as the
+   	previous Beaglebone project, but now the input and output are from/to
+	a network connection to a server.
+   	<ol type="1">
+		<li> open a TCP connection to the server at the specified address and port</li>
+		<li> immediately send (and log) an ID terminated with a newline:<br>
+			<strong><tt>ID=</tt></strong><em>ID-number</em>  <br>
+			This new report
+			enables the server to keep track of which devices it has received 
+			reports from.
+		</li>
+		<li> as before, send (and log) newline terminated temperature reports over the connection </li>
+		<li> as before, process (and log) newline-terminated commands received over the connection<br>
+			If your temperature reports are mis-formatted, the server will return
+			a <strong><tt>LOG</tt></strong> command with a description of the
+			error.<br> 
+			Having logged these commands will help you
+			find and fix any problems with your reports.
+		</li>
+		<li> as before, the last command sent by the server will be an <strong><tt>OFF</tt></strong>.<br>
+		     Unlike the previous project, the button will not be used as an
+		     alternative manual shutdown mechanism.
+		</li>
+	</ol>
+   	<P>
+	   Do not accept commands from standard input, or send received commands or generated
+	   reports to standard output.
+	</p>
+   </li>
+   <li> As before, assume that the temperature sensor has been connected
+     	to Analog input 0.</li>
+</ul>
+The ID number (passed with the initial <strong>ID=</strong> command) will appear in the TCP server log
+(follow the
+<a href="serverinfo.html">TCP server URL</a>),
+and will permit you to find the reports and server-side logs for your sessions.
+It is vitally important that the <strong>ID=</strong> string you send to the server (in your first report) 
+be identical to the value (passed to your client) in the <tt>--id=</tt> command line argument.
+If they are not identical, the sanity-check and grading scripts will be unable to find
+the reports from your session(s) and will assume that your program did not work.
+</P>
+<P>
+If the server receives incorrect reports from you it will send back LOG
+messages describing the errors.
+</P>
+<p>
+To protect your privacy, you do not have to use your student ID number, but merely
+a nine-digit number that you will recognize and that will be different from the
+numbers chosen by others. 
+</p>
+<P>
+From the server status page, you will also be able to see, for each client,
+a log of all commands sent to and reports received from that client in the
+most recent session.  If the server does not like your reports, it may be due
+to garbage (typically null) characters.  If the problem with your reports is
+not obvious, examine the server log in an editor that will display non-graphical
+characters.
+</p>
+<P>
+As in Project 4B, to facilitate development and testing you might find it helpful to write your program to, if compiled with a special
+(<tt>-DDUMMY</tt>) define, include mock implementations for the <tt>mraa_aio_</tt> and
+<tt>mraa_gpio_</tt> functionality. Doing so will enable you to do most of your testing on your regular computer.
+When you are satisfied that it works there, modify your Makefile run the command "<tt>uname -r</tt>", check for the
+presence of the string "<tt>beaglebone</tt>" in that output, and if not found, build with a rule
+that passed the <tt>-DDUMMY</tt> flag to <em>gcc</em>.
+</p>
+
+
+<H3>Part 2: Authenticated TLS Session Encryption</H3>
+<P>
+Write a program (called <tt>lab4c_tls</tt>) that:
+<ul>
+   <li> builds and runs on your Beaglebone</li>
+   <li> is based on the remote logging appliance build in part 1</li>
+ <!--
+   <li> accepts the following additional command line parameter:
+   	<ul>
+	<li><tt>--serverkey=</tt><em>key file</em> for server's public key</li>
+	</ul>
+   </li>
+ -->
+   <li> operates by:
+   	<ol type="1">
+		<li> opening a TLS connection to the server at the specified address and port
+		     <!-- and authenticating the server against a supplied
+			     <a href="lab4c_server.crt">certificate</a>.
+		     If the server
+		     does not use the expected certificate, log an error (to both
+		     standard error and to the log), close the connection, and exit.-->
+		</li>
+		<li> sending (and logging) your student ID followed by a newline </li>
+		<li> sending (and logging) temperature reports over the connection </li>
+		<li> processing (and logging) commands received over the connection </li>
+	</ol>
+   </li>
+</ul>
+The ID number will appear in the TLS server log
+(follow the
+<a href="serverinfo.html">TLS server URL</a>),
+and will permit you to find the reports for your sessions. 
+</p>
+<P>
+The SSL library is not bullet-proof against protocol errors, and buggy clients 
+will occasionally crash the server.  It should be restarted pretty promptly.
+If not, ask one of the TAs for help.  If the server seems to crash when you
+are testing your client, you probably have a bug in your SSL connection establishment.
+</P>
+<p>
+Note that you may choose to:
+<ul>
+	<li>write two versions of the program</li>
+	<li>write a single program that can be compiled to produce two different executables</li>
+	<li>write a single executable that implements both functionalities, and chooses which to use
+	    based on the name by which it was invoked.  In this last case, your Makefile should 
+	    produce two different links (with the required names) to that program.
+	    </li>
+</ul>
+</p>
+
+<H2> SUMMARY OF EXIT CODES: </H2>
+<ul>
+	<li> 0: successful run</li>
+	<li> 1: invalid command-line parameters (e.g., unrecognized parameter, no such host)</li>
+	<li> 2: other run-time failures (e.g., server rejected or closed session)</li>
+</ul>
+
+<H2>SUBMISSION:</H2>
+<p>
+Your tarball should have a name of the form <tt>lab4c-</tt><em>studentID</em><tt>.tar.gz</tt>.
+You can sanity check your submission with this 
+<A href="P4C_check.sh">test script</A>
+which should run on your Beaglebone or (if with appropriately dummied sensor access) on your usual Linux development environment.
+There will be no manual re-grading on this project.
+Submissions that do not pass the test script are likely to receive very low scores.
+</p>
+<P>
+Your <strong>README</strong> file (and all source files) must include lines of the form:
+<ul>
+	<strong>NAME:</strong> <em>your name</em><br>
+	<strong>EMAIL:</strong> <em>your email</em><br>
+	<strong>ID:</strong> <em>your student ID</em>
+</ul>
+And, if slip days are allowed on this project, and you want to use some,
+this too must be included in the <strong>README</strong> file:
+<ul>
+	<strong>SLIPDAYS:</strong> <em>#days</em>
+</ul>
+If, for instance, you wanted to use two slip-days, you would add the following
+line:
+<ul>
+	<strong>SLIPDAYS: 2</strong>
+</ul>
+</P>
+
+<H2>GRADING:</H2>
+<P>
+Points for this project will be awarded:
+</P>
+<div align="center">
+<table><tbody>
+<tr> <th>value</th>	<th align="left">feature</th></tr>
+
+<tr> <td></td>		<th align="left">Packaging and build (10% total)</th></tr>
+<tr> <td>3%</td>	<td>un-tars expected contents</td></tr>
+<tr> <td>3%</td>	<td>clean build of correct program w/default action (no warnings)</td></tr>
+<tr> <td>2%</td>	<td>Makefile has working <tt>clean</tt>, <tt>dist</tt> targets</td></tr>
+<tr> <td>2%</td>	<td>reasonableness of <tt>README</tt> contents</td></tr>
+
+<tr> <td></td> </tr>
+<tr> <td></td>		<th align="left">Unencrypted (50% total)</th></tr>
+<tr> <td>20%</td>	<td>establishes TCP session, and presents ID</td></tr>
+<tr> <td>10%</td>	<td>reports temperatures</td></tr>
+<tr> <td>10%</td>	<td>correct command processing</td></tr>
+<tr> <td>10%</td>	<td>command and data logging</td</tr>
+
+<tr> <td></td> </tr>
+<tr> <td></td>		<th align="left">Encrypted Server Sessions (40% total)</th></tr>
+<tr> <td>20%</td>	<td>establishes TLS session, presents ID</td></tr>
+<!--
+<tr> <td>10%</td>	<td>correctly authenticates (or rejects) server</td></tr>
+-->
+<tr> <td>10%</td>	<td>reports temperatures</td></tr>
+<tr> <td>10%</td>	<td>correct command processing</td></tr>
+</tbody></table>
+</div>
+
+</BODY>
+</HTML>

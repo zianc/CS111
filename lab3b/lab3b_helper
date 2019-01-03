@@ -1,0 +1,8 @@
+#Name:Xuesen Cui                                                                                             #Email:cuixuesen@ucla.edu                                                                                    #ID:604941626                                                                                                
+#NAME: Haiying Huang                                                                                        
+#EMAIL: hhaiying1998@outlook.com                                                                             
+#ID: 804757410
+
+python lab3b.py $1
+
+exit $?

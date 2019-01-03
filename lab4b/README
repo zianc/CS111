@@ -1,0 +1,15 @@
+NAME: Haiying Huang
+EMAIL: hhaiying1998@outlook.com
+ID: 804757410
+
+1.) Description of included files
+
+lab4b.c:  C source file for an embedded application that samples a sensor at a configurable rate, accept commands from STDIN, and reports to STDOUT or a log file
+Makefile: a makefile that supports default, check, clean, and dist entries
+README: a simple text file that describes this program
+
+2.) Comments:
+
+To get familiar with the mraa library, I refer to the tutorial on https://drive.google.com/drive/folders/0B6dyEb8VXZo-N3hVcVI0UFpWSVk
+To understand the design of this embedded application, I refer to the TA slides
+To test my program, I run the executable with --log, supply different combinations of STDIN commands, shutdown either by OFF command or pressing the button. Then, I check each line of my logfile to make sure that the intervals between two time stamps are as expected. 

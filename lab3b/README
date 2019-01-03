@@ -1,0 +1,16 @@
+// NAME: Xuesen Cui, Haiying Huang
+// EMAIL:cuixuesen@ucla.edu, hhaiying1998@outlook.com
+// ID:604941626, 804757410
+
+
+1. File description:
+   lab3b.py: a python file script that reads a csv file to do file system consistency analysis
+   lab3b_helper:a helper script to build the execuatable 
+   Makefile: a Makefile for this program.
+   README: a simple description text file.
+
+2. References:
+   To understand the structure of EXT2 file system, such as blocks, groups, 
+and inodes, we refer to the online documents http://www.nongnu.org/ext2-doc/ext2.html#I-BLOCK
+   To understand the higher level indirect blocks, we refer to the TA slides 
+   

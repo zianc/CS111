@@ -1,0 +1,212 @@
+Total: 337 samples
+     305  90.5%  90.5%      333  98.8% myThreadFunc
+      18   5.3%  95.8%       18   5.3% __strcmp_sse42
+       5   1.5%  97.3%       12   3.6% SortedList_insert
+       5   1.5%  98.8%       16   4.7% SortedList_lookup
+       4   1.2% 100.0%        4   1.2% _init
+       0   0.0% 100.0%      333  98.8% __clone
+       0   0.0% 100.0%      333  98.8% start_thread
+ROUTINE ====================== myThreadFunc in /u/ee/ugrad/haiying/cs111/project2b/lab2b_list.c
+   305    333 Total samples (flat / cumulative)
+     .      .   62: 		exit(2);
+     .      .   63: 	}
+     .      .   64: }
+     .      .   65: 
+     .      .   66: void* myThreadFunc(void* vargp)
+---
+     .      .   67: {
+     .      .   68: 	int n = *((int*) vargp);
+     .      .   69: 	int i, index;
+     .      .   70: 	Sublist_t* list_curr;
+     .      .   71: 
+     .      .   72: 	for (i = n * num_iters ; i < (n + 1) * num_iters; ++i)
+     .      .   73: 	{
+     .      .   74: 		index = (opt_lists) ? hash(repo[i].key, num_lists) : 0;
+     .      .   75: 		list_curr = &list_arr[index];
+     .      .   76: 		if (opt_lock_m)
+     .      .   77: 			pthread_mutex_lock(&list_curr->lock_m);
+     .      .   78: 		else if (opt_lock_s)
+     .      .   79: 		{
+     .      .   80: 			while (__sync_lock_test_and_set(&list_curr->lock_s, 1))
+   231    231   81: 				while (list_curr->lock_s);
+     .      .   82: 		}
+     .      .   83: 
+     .     12   84: 		SortedList_insert(list_curr->head, &repo[i]);
+     .      .   85: 
+     .      .   86: 		if (opt_lock_m)
+     .      .   87: 			pthread_mutex_unlock(&list_curr->lock_m);
+     .      .   88: 		else if (opt_lock_s)
+     .      .   89: 			__sync_lock_release(&list_curr->lock_s);
+     .      .   90: 
+     .      .   91: 	}
+     .      .   92: 
+     .      .   93: 	int length, sum;
+     .      .   94: 	for (i = 0; i < num_lists; ++i)
+     .      .   95: 	{
+     .      .   96: 		list_curr = &list_arr[i];
+     .      .   97: 		if (opt_lock_m)
+     .      .   98: 				pthread_mutex_lock(&list_curr->lock_m);
+     .      .   99: 		else if (opt_lock_s)
+     .      .  100: 		{
+     .      .  101: 			while (__sync_lock_test_and_set(&list_curr->lock_s, 1))
+     .      .  102: 				while (list_curr->lock_s);
+     .      .  103: 		}
+     .      .  104: 
+     .      .  105: 		int length = SortedList_length(list_curr->head);
+     .      .  106: 		if (length < 0)
+     .      .  107: 		{
+     .      .  108: 			fprintf(stderr, "Find corrupted list!\n");
+     .      .  109: 			exit(2);
+     .      .  110: 		}
+     .      .  111: 
+     .      .  112: 		if (opt_lock_m)
+     .      .  113: 			pthread_mutex_unlock(&list_curr->lock_m);
+     .      .  114: 		else if (opt_lock_s)
+     .      .  115: 			__sync_lock_release(&list_curr->lock_s);
+     .      .  116: 		sum += length;
+     .      .  117: 	}
+     .      .  118: 
+     .      .  119: 	for (i = n * num_iters ; i < (n + 1) * num_iters; ++i)
+     .      .  120: 	{
+     .      .  121: 		index = (opt_lists) ? hash(repo[i].key, num_lists) : 0;
+     .      .  122: 		list_curr = &list_arr[index];
+     .      .  123: 
+     .      .  124: 		if (opt_lock_m)
+     .      .  125: 			pthread_mutex_lock(&list_curr->lock_m);
+     .      .  126: 		else if (opt_lock_s)
+     .      .  127: 		{
+     .      .  128: 			while (__sync_lock_test_and_set(&list_curr->lock_s, 1))
+    74     74  129: 				while (list_curr->lock_s);
+     .      .  130: 		}
+     .      .  131: 
+     .     16  132: 		SortedListElement_t* target_to_del = SortedList_lookup(list_curr->head, repo[i].key);
+     .      .  133: 
+     .      .  134: 		if (! target_to_del)
+     .      .  135: 		{
+     .      .  136: 			fprintf(stderr, "Find corrupted list!\n");
+     .      .  137: 			exit(2);
+     .      .  138: 		}
+     .      .  139: 
+     .      .  140: 		if (SortedList_delete(target_to_del) == 1)
+     .      .  141: 		{
+     .      .  142: 			fprintf(stderr, "Find corrupted list!\n");
+     .      .  143: 			exit(2);
+     .      .  144: 		}
+     .      .  145: 
+     .      .  146: 		if (opt_lock_m)
+     .      .  147: 			pthread_mutex_unlock(&list_curr->lock_m);
+     .      .  148: 		else if (opt_lock_s)
+     .      .  149: 			__sync_lock_release(&list_curr->lock_s);
+     .      .  150: 
+     .      .  151: 
+     .      .  152: 	}
+     .      .  153: 	return NULL;
+     .      .  154: }
+---
+     .      .  155: // the subroutine that each thread runs
+     .      .  156: 
+     .      .  157: void gen_random_str(char* buf, const int len) {
+     .      .  158: 
+     .      .  159:     static const char dict[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+ROUTINE ====================== myThreadFunc in /u/ee/ugrad/haiying/cs111/project2b/lab2b_list.c
+   305    333 Total samples (flat / cumulative)
+     .      .   62: 		exit(2);
+     .      .   63: 	}
+     .      .   64: }
+     .      .   65: 
+     .      .   66: void* myThreadFunc(void* vargp)
+---
+     .      .   67: {
+     .      .   68: 	int n = *((int*) vargp);
+     .      .   69: 	int i, index;
+     .      .   70: 	Sublist_t* list_curr;
+     .      .   71: 
+     .      .   72: 	for (i = n * num_iters ; i < (n + 1) * num_iters; ++i)
+     .      .   73: 	{
+     .      .   74: 		index = (opt_lists) ? hash(repo[i].key, num_lists) : 0;
+     .      .   75: 		list_curr = &list_arr[index];
+     .      .   76: 		if (opt_lock_m)
+     .      .   77: 			pthread_mutex_lock(&list_curr->lock_m);
+     .      .   78: 		else if (opt_lock_s)
+     .      .   79: 		{
+     .      .   80: 			while (__sync_lock_test_and_set(&list_curr->lock_s, 1))
+   231    231   81: 				while (list_curr->lock_s);
+     .      .   82: 		}
+     .      .   83: 
+     .     12   84: 		SortedList_insert(list_curr->head, &repo[i]);
+     .      .   85: 
+     .      .   86: 		if (opt_lock_m)
+     .      .   87: 			pthread_mutex_unlock(&list_curr->lock_m);
+     .      .   88: 		else if (opt_lock_s)
+     .      .   89: 			__sync_lock_release(&list_curr->lock_s);
+     .      .   90: 
+     .      .   91: 	}
+     .      .   92: 
+     .      .   93: 	int length, sum;
+     .      .   94: 	for (i = 0; i < num_lists; ++i)
+     .      .   95: 	{
+     .      .   96: 		list_curr = &list_arr[i];
+     .      .   97: 		if (opt_lock_m)
+     .      .   98: 				pthread_mutex_lock(&list_curr->lock_m);
+     .      .   99: 		else if (opt_lock_s)
+     .      .  100: 		{
+     .      .  101: 			while (__sync_lock_test_and_set(&list_curr->lock_s, 1))
+     .      .  102: 				while (list_curr->lock_s);
+     .      .  103: 		}
+     .      .  104: 
+     .      .  105: 		int length = SortedList_length(list_curr->head);
+     .      .  106: 		if (length < 0)
+     .      .  107: 		{
+     .      .  108: 			fprintf(stderr, "Find corrupted list!\n");
+     .      .  109: 			exit(2);
+     .      .  110: 		}
+     .      .  111: 
+     .      .  112: 		if (opt_lock_m)
+     .      .  113: 			pthread_mutex_unlock(&list_curr->lock_m);
+     .      .  114: 		else if (opt_lock_s)
+     .      .  115: 			__sync_lock_release(&list_curr->lock_s);
+     .      .  116: 		sum += length;
+     .      .  117: 	}
+     .      .  118: 
+     .      .  119: 	for (i = n * num_iters ; i < (n + 1) * num_iters; ++i)
+     .      .  120: 	{
+     .      .  121: 		index = (opt_lists) ? hash(repo[i].key, num_lists) : 0;
+     .      .  122: 		list_curr = &list_arr[index];
+     .      .  123: 
+     .      .  124: 		if (opt_lock_m)
+     .      .  125: 			pthread_mutex_lock(&list_curr->lock_m);
+     .      .  126: 		else if (opt_lock_s)
+     .      .  127: 		{
+     .      .  128: 			while (__sync_lock_test_and_set(&list_curr->lock_s, 1))
+    74     74  129: 				while (list_curr->lock_s);
+     .      .  130: 		}
+     .      .  131: 
+     .     16  132: 		SortedListElement_t* target_to_del = SortedList_lookup(list_curr->head, repo[i].key);
+     .      .  133: 
+     .      .  134: 		if (! target_to_del)
+     .      .  135: 		{
+     .      .  136: 			fprintf(stderr, "Find corrupted list!\n");
+     .      .  137: 			exit(2);
+     .      .  138: 		}
+     .      .  139: 
+     .      .  140: 		if (SortedList_delete(target_to_del) == 1)
+     .      .  141: 		{
+     .      .  142: 			fprintf(stderr, "Find corrupted list!\n");
+     .      .  143: 			exit(2);
+     .      .  144: 		}
+     .      .  145: 
+     .      .  146: 		if (opt_lock_m)
+     .      .  147: 			pthread_mutex_unlock(&list_curr->lock_m);
+     .      .  148: 		else if (opt_lock_s)
+     .      .  149: 			__sync_lock_release(&list_curr->lock_s);
+     .      .  150: 
+     .      .  151: 
+     .      .  152: 	}
+     .      .  153: 	return NULL;
+     .      .  154: }
+---
+     .      .  155: // the subroutine that each thread runs
+     .      .  156: 
+     .      .  157: void gen_random_str(char* buf, const int len) {
+     .      .  158: 
+     .      .  159:     static const char dict[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";

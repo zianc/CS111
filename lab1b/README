@@ -1,0 +1,23 @@
+
+NAME: Haiying Huang
+EMAIL: hhaiying1998@outlook.com
+ID: 804757410
+
+SLIPDAYS: 1
+
+1. Description of included files
+
+lab1b-client.c: a C source program that sends input from the keyboard to the socket (while echoing to the display), and input from the socket to the display
+lab1b-server.c: a C source program that sends the client's commands to the shell and will serve the client outputs of shell
+my.key: a txt file that contains the key for encryption
+Makefile: a Makefile that supports three targets default, clean, and dist.
+
+2. Encryption algorithm
+   For --encrypt, I used the twofish algorithm with cfb mode
+   For the encryption key, I used a 128 bit or 16 bytes key: hellohellohellohello
+   For the initialization vector, I used a char array of '\0'
+
+3. Reference source
+   To understand socket functions, I refer to http://www.cs.rpi.edu/~moorthy/Courses/os98/Pgms/socket.html
+   To understand the program at high level, I refer to TA slides on CCLE  
+   

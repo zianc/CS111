@@ -1,0 +1,16 @@
+NAME: Haiying Huang
+EMAIL: hhaiying1998@outlook.com
+ID: 804757410
+
+1.) Description of included files
+
+lab4c_tcp.c: a C source file that samples the temperature on beaglebone and communicates with a servier via TCP connection
+lab4c_tls.c: a C source file that samples the temperature on beaglebone and communicates with a servier via SSL connection
+Makefile: a Makefile that supports default, clean, and dist targets
+README: a simple text file that describes this program
+
+2.) Comments:
+
+To get familiar with the mraa library, I refer to the tutorial on https://drive.google.com/drive/folders/0B6dyEb8VXZo-N3hVcVI0UFpWSVk
+To understand the design of this embedded application, I refer to the TA slides
+To understand the OpenSSL library, I refer to the documents on https://www.openssl.org/docs/manmaster/man7/ssl.html

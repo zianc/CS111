@@ -1,0 +1,431 @@
+<html>
+<head>
+<title>Project 1A</title>
+</head>
+
+<body >
+<center>
+<h1>Project 1A<br>
+Terminal I/O and Inter-Process Communication </h1>
+</center>
+
+<h2> INTRODUCTION: </h2>
+<p>
+In this project, you will build a multi-process telnet-like client and 
+server. Part A of the project (this part) can be broken up into two 
+major steps: 
+</p>
+<ul>
+	<li> Character-at-a-time, full duplex terminal I/O </li>
+	<li> Polled I/O and passing input and output between two processes </li>
+</ul>
+<p>
+You will be extending the same code in Project 1B, so make sure it is readable and easy to modify.
+</p>
+
+<h2> RELATION TO READING AND LECTURES: </h2>
+<p>
+This lab will build on the process and exception discussions in the lecture
+on processes and exceptions, but it is really about researching and exploiting APIs.
+</p>
+<h2> PROJECT OBJECTIVES: </h2>
+<ul>
+	<li> Demonstrate the ability to research new APIs and debug code that exploits them </li>
+	<li> Exploit the following OS features: </li>
+	<ul>
+	   <li> Terminal I/O and modes (as an example of a complex API set) </li>
+	   <li> Polled I/O (a means of awaiting input from multiple sources)</li>
+	   <li> Inter-process communication </li>
+	   <li> Exception handling </li>
+	</ul>
+	<li> Develop a multi-process application </li>
+	<li> Develop debugging skills for multi-process and non-deterministic problems</li>
+</ul>
+
+<h2> DELIVERABLES: </h2>
+<p>
+A single tarball (.tar.gz) containing:
+</p>
+<ul>
+	<li> a single C source module that compiles cleanly (with no errors or warnings).  </li>
+	<li> a Makefile to build the program 
+	     (compiling it with the <strong><tt>-Wall</tt></strong> and 
+	     <strong><tt>-Wextra</tt></strong> options)
+	     and the tarball.
+	     You are not required to include a <tt>check</tt> target in this Makefile, 
+	     but it should support the standard default, <tt>clean</tt> and <tt>dist</tt>
+	     targets.</li>
+	<li> a README file describing each of the included files and any other 
+		information about your submission that you would like to bring to our 
+		attention 
+	 	(e.g., research, limitations, features, testing methodology).</LI>
+</ul>
+
+<h2> PROJECT DESCRIPTION: </h2>
+<p>
+You will write a program that compiles to an executable named 
+lab1a, that accepts the command line argument <tt>--shell</tt> (explained below).<br>
+</p>
+<ol>
+	<li> Study the following manual sections: 
+	    <ul>
+		<li> <em>termios(3), tcgetattr(3), tcsetattr(3)</em>, etc. ...
+		     for manipulating terminal attributes </li>
+		<li> <em>fork(2)</em>  ... for creating new processes </li>
+		<li> <em>waitpid(2)</em> ... to allow one process to monitor another 
+		 	process's state, and react to changes in state </li>
+		<li> <em>exec(3)</em> ... a family of calls for loading a new program
+			into a running process </li>
+		<li> <em>pipe(2)</em> ... for inter-process communication </li>
+		<li> <em>kill(3)</em> ... for sending signals to processes by PID </li>
+	    	<li> <em>strerror(3)</em> ... descriptions associated with system call errors</li>
+		<li> <em>poll(2)</em> ... to wait for the first of multiple input sources</li>
+	    </ul>
+	</li>
+	<P></P>
+	<li> Character-at-a-time, full duplex terminal I/O
+	     <P></P>
+	     Write a program (executable should be called <tt>lab1a</tt>) to:
+	    <ul>
+		<li>put the keyboard (the file open on file descriptor 0)
+			into character-at-a-time, no-echo mode 
+			(also known as non-canonical input mode with no echo).
+			It is not suggested that you attempt to construct a set
+			of correct terminal modes from scratch, as there are 
+			numerous subtle options, most of which will render your
+			terminal window unusable if incorrectly set.
+			Rather, it is suggested that you get the current terminal
+			modes, save them for restoration, and then make
+			a copy with only the following changes:
+			<pre><tt>
+	c_iflag = ISTRIP;	/* only lower 7 bits	*/
+	c_oflag = 0;		/* no processing	*/
+	c_lflag = 0;		/* no processing	*/
+			</tt></pre>
+			and these changes should be made with the <tt>TCSANOW</tt> option.
+			Note that this sort of mode change may result in the flushing of
+			queued input or output characters.  Thus the modes should be set
+			immediately on start-up (before any characters are entered) and
+			reset as the last thing before shutdown (after all returned output has
+			been processed).
+			</li>
+		<li> read (ASCII) input from the keyboard into a buffer. 
+			In character-at-a-time mode, you get characters as soon as
+			they are typed, without waiting for a newline.  
+			In most cases you will only get one character for each
+			read, but if the system is running slowly and you type
+			fast multiple characters may have accumulated by the
+			time you issue your <em>read</em>.  Thus you should
+			do a larger read (for whatever your buffer size is)
+			and process all the characters you receive.</li>
+		<li> map received <em>&lt;cr&gt;</em> or <em>&lt;lf&gt;</em> 
+			into <em>&lt;cr&gt;&lt;lf&gt;</em> 
+			(see below for a note on carriage return, linefeed, and EOF).</li>
+		<li> write the received characters back out to the display, 
+			as they are processed. </li>
+		<li> upon detecting a pre-defined escape sequence (<em>^D</em>), 
+			restore normal terminal modes and exit 
+			(hint: do this by saving the <u>normal</u> terminal settings 
+			when you start up, and restoring them on exit).  </li>
+	    </ul>
+	    <P>
+	    Note: You will surely have your program exit without properly
+	    restoring modes, after which your terminal session may seem unusable.
+	    Get familiar with the <tt>stty sane</tt> option of
+	     <em>stty(1)</em>.  If your program exists with your
+	     terminal modes in some unusable state, you can usually
+	     fix it by typing <em>^J</em> <tt>stty sane</tt> <em>^J</em>,
+	     where <em>^J</em> is a <em>control-J</em> (or linefeed
+	     character).
+	    </p>
+	</li>
+	<P></P>
+	<li> Passing input and output between two processes
+	     <P></P>
+	     Extend and refactor your program to support a <tt>--shell=</tt><em>program</em> argument to pass 
+	     input/output between the terminal and a shell: 
+	    <ul>
+		<li> fork to create a new process, and then exec the specified
+			program (with no arguments other than its name), 
+			whose standard input is a pipe from the 
+			terminal process, and whose standard output
+			and standard error are (dups of) a
+			pipe to the terminal process. 
+			(You will need two pipes, one for each direction 
+			of communication, as pipes are unidirectional.)
+			<p>
+			On most systems the most appropriate shell is probably 
+			<tt>/bin/bash</tt>.
+			</p>
+			</li>
+
+		<li> read (ASCII) input from the keyboard, 
+		     echo it to stdout, and forward it to the shell. 
+		     <em>&lt;cr&gt;</em> or <em>&lt;lf&gt;</em> should echo 
+		     as <em>&lt;cr&gt;&lt;lf&gt;</em> 
+		     but go to shell as <em>&lt;lf&gt;</em>.  </li>
+		<li> read input from the shell pipe 
+		     and write it to stdout.  If it receives an <em>&lt;lf&gt;</em>
+		     from the shell, it should print it to the screen as
+		     <em>&lt;cr&gt;&lt;lf&gt;</em>.
+		     <P>
+		     We type one character at a time, and so each <em>read(2)</em> from the
+		     keyboard is likely to return only one character, even if
+		     we do the <em>read</em> for a much larger number of characters.
+		     But a shell command may generate many lines, so reads from
+		     the shell are likely to return many more characters.  It
+		     is suggested that you should do a large (e.g., 256 byte)
+		     <em>read</em>, and then process however many characters you actually
+		     receive.
+		     </p>
+		     </li>  
+	    	<li> Data should be passed in both directions as soon as it is
+		     received.  Do not wait until you encounter a newline.
+		     The shell can process character-at-a-time input, and 
+		     many commands generate output that is not followed by
+		     a newline.</li>
+	    </ul>
+	    <P>
+	    The trick here is that will not be a strict alternation between
+	    input from the keyboard and input from the shell.  Either is capable
+	    of generating input at any time.  If we do a <em>read(2)</em> from
+	    the keyboard, we will block until keyboard input becomes available,
+	    even if there is input from the shell pipe waiting for us!  The
+	    <em>poll(2)</em> system call enable us to solve this problem:
+	    <ul>
+	       <li> Create an array of two <tt>pollfd</tt> structures, one
+	            describing the keyboard (stdin) and one describing the
+		    pipe that returns output from the shell.</li>
+	       <li> Have both of these <tt>pollfd</tt>s wait for either
+	       	    input (<tt>POLLIN</tt>) or error (<tt>POLLHUP</tt>,
+		    <tt>POLLERR</tt>) events.</li>
+	       <li> Write a main loop that calls <em>poll(2)</em>
+	            (<tt>timeout=0</tt>) and then <u>only</u> reads from a 
+		    file descriptor <u>if it has pending input</u> 
+		    (as reported in the corresponding <tt>revents</tt> field).</li>
+	       <li> It is possible that by the time we do our final <em>poll</em>
+	       	    the shell will have both returned its final output and exited,
+		    so that there will be multiple events (e.g. <TT>POLLIN</tt>,
+		    and <tt>POLLHUP</tt>) associated with the pipe from the shell.
+		    Always process all available input before processing the 
+		    shut-down indication.  Otherwise you may discard the final
+		    output.
+		    </li>
+	    </ul>
+	    </P>
+	    <P>
+	    You should now be able to type shell commands to your program, 
+	    see them echoed as you type them, and then see the output from
+	    the shell (and any command you run under it).
+	    </P><P>
+	    Because we have disabled all of the normal input processing, the
+	    interrupt character (<em>^C</em>) becomes just another character.
+	    When your program reads a <em>^C</em> (<tt>0x03</tt>) from the 
+	    keyboard, it should use <em>kill(2)</em> to
+	    send a <tt>SIGINT</tt> to the shell process. 
+	    Note that the shell will not necessarily die as a result 
+	    of receiving this signal.
+	    </P>
+	    <P>
+	    You may find it easier to tell if your program has recognized
+	    a <em>^C</em> or <em>^D</em> if, rather than echoing them 
+	    directly back to the screen, you translate each into a 
+	    standard graphical representation (echoing a caret in
+	    front of the letter: <tt>^C</tt> or <tt>^D</tt>).
+	    </p>
+	    <P>
+	    You may find debugging complicated by the fact that it is not 
+	    obvious which process did or did not receive or generate 
+	    which character when.  If you add a <tt>--debug</tt> option to
+	    your program that enables copious logging (e.g., to stderr) of every 
+	    processed
+	    character and event, you may find that this greatly facilitates
+	    the debugging process.
+	    </p>
+	<li> shutdown processing:
+	    <ul>
+		<li> Upon receiving an EOF (<em>^D</em>, or <tt>0x04</tt>) 
+			from the terminal, 
+			close the pipe to the shell, but continue processing
+			input from the shell.  
+			We do this because there may still be output in 
+			transit from the shell.
+		    <P>
+		    NOTE that a reader (e.g., your shell) will not get an end-of-file
+		    from a pipe until (all copies of) the write file descriptor 
+		    (in all processes that share it) are closed.  This means you 
+		    have to close pipe file descriptors:
+		    <ol type="a">
+			<li>in processes that don't use that end of that pipe.</li>
+			<li>after your process is through writing to it (e.g., because
+			    you received an ^D)</li>
+		    </ol>
+		    </P>
+		    <p>
+		    The same is true of the pipe back from the shell to your process.
+		    Your <em>poll</em> will not return an error and your <em>read</em>
+		    will not return an EOF until the last write file descriptor associated
+		    with that pipe has been closed.
+		    </p>
+		</li>
+		<li> Upon receiving EOF or polling-error from the shell, 
+			we know that (after we process the data already in the pipe)
+			there will be no more output coming from the shell.
+		</li>
+		<li> Our first indication that the shell has shut down might also be
+		     the receipt of a <tt>SIGPIPE</tt> from a write to the pipe
+		     to the shell
+			(i.e., because the shell has exited). </li>
+
+		<li> After you have closed the write pipe to the shell and processed
+		     the final output returned from the shell, you should collect
+		     the shell's exit status (using <em>waitpid(2)</em> or a related 
+		     function to await the process' completion and capture its return 
+		     status) and report it to stderr in a line of the form:
+		     <ul>
+		     	<strong><tt>SHELL EXIT SIGNAL=</tt></strong><em>#</em> <strong><tt>STATUS=</tt></strong><em>#</em>
+		     </ul>
+		     <p>
+		     where the first <em>#</em> is the low order 7-bits (0x007f) of the shell's
+		     exit status and the second <em>#</em> is the next higher order byte (0xff00) of the
+		     shell's exit status (both decimal integers).
+		     </p>
+		</li>
+	    </ul>
+	    <P>
+	    Note that the three normal shut-down scenarios (closing the pipe from the keyboard 
+	    reader, receiving a <tt>SIGPIPE</tt> from the keyboard reader, and receiving an
+	    EOF from the shell reader) are not mutually independent.  It is likely that,
+	    no matter how the shut-down is initiated, multiple of these events will
+	    occur in a non-deterministic order.  
+	    </p>
+	</li>
+	<P></P>
+    	<li> error checking
+	     <ul>
+	     	Check for errors after all system calls.  
+		If system calls fail (for reasons other than shell shutdown) or arguments are unrecognized,
+		print a meaningful error message to standard error, and exit
+		with a return code of 1.
+	     <ul>
+	</li>
+</ol>
+
+<P>
+Summary of exit codes:
+<UL>
+0 ... normal execution, shutdown on ^D<br>
+1 ... unrecognized argument or system call failure<br>
+</UL>
+</P>
+
+<h2> SUBMISSION: </h2>
+<P>
+Your <strong>README</strong> file must include lines of the form:
+<ul>
+	<strong>NAME:</strong> <em>your name</em><br>
+	<strong>EMAIL:</strong> <em>your email</em><br>
+	<strong>ID:</strong> <em>your student ID</em>
+</ul>
+And, if slip days are allowed on this project, and you want to use some,
+this too must be included in the <strong>README</strong> file:
+<ul>
+	<strong>SLIPDAYS:</strong> <em>#days</em>
+</ul>
+If, for instance, you wanted to use two slip-days, you would add the following
+line:
+<ul>
+	<strong>SLIPDAYS: 2</strong>
+</ul>
+Your name, student ID, and email address  should also appear as comments at the top
+of your <tt>Makefile</tt> and each source file.
+</P>
+<p>
+Your tarball should have a name of the form <tt>lab1a-</tt><em>studentID</em><tt>.tar.gz</tt>.
+You can sanity check your submission with this 
+<A href="P1A_check.sh">test script</A>.
+</p>
+<p>
+We will test it on a departmental Linux server.  
+You would be well advised to test your submission on that platform before submitting it.  Depending on the TA policy for your quarter, submissions that do not
+work on these servers may lose points.
+</P>
+<h2> A HISTORICAL NOTE ON <em>CR</em>, <em>LF</em>, AND <em>EOF</em>: </h2>
+<p>
+Long ago, when interaction was through mechanical teletypes with moving print-heads
+and paper rolls, these ASCII codes had the following meanings:
+</p>
+<ul>
+	<table><tbody>
+	<tr><td>0x0D</td>	<td><em>Carriage Return</em> (or <tt>'\r'</tt> in C)
+				meant move the printing head back to 
+				the left edge of the paper.</td></tr>
+
+	<tr><td>0x0A</td>	<td><em>Line Feed</em> (or <tt>'\n'</tt> in C)
+				meant move the paper upwards one line.</td></tr>
+	<tr><td>0x04</td>	<td><em>End Of File</em> meant there is no more input.</td></tr>
+	</tbody></table>
+</ul>
+<p>
+So every line of text ended with <em>&lt;cr&gt;&lt;lf&gt;</em> or <tt>0x0D 0x0A</tt>. 
+This is still the case in Windows.  Other people felt it was archaic foolishness to 
+require two characters to indicate the end of line, and suggested that 
+<em>&lt;lf&gt;</em> or <tt>0x0A</tt> (renamed <em>newline</em>) should be all 
+that was required. 
+This is how files are represented in UNIX descendants. 
+But when output is sent to a virtual terminal, the <em>newline</em> is still translated 
+into the two distinct motion characters <em>&lt;cr&gt;</em> and <em>&lt;lf&gt;</em>.
+</p>
+<p>
+
+</p>
+<p>
+DOS systems used to put a <tt>0x18</tt> (<em>^Z</em>) as the last character of a 
+file to indicate END OF FILE, while most other operating systems simply 
+ended the data (subsequent reads return nothing).
+</p>
+
+<h2> GRADING: </h2>
+<P>
+Points for this project will be awarded:
+</P>
+<div align="center">
+<table><tbody>
+<tr> <th>value</th>	<th align="left">feature</th></tr>
+
+<tr> <td></td>		<th align="left">Packaging and build (15% total)</th></tr>
+<tr> <td>5%</td>	<td>un-tars expected contents</td></tr>
+<tr> <td>5%</td>	<td>clean build w/default action (no warnings)</td></tr>
+<tr> <td>3%</td>	<td>Makefile has <tt>clean</tt> and <tt>dist</tt> targets</td></tr>
+<tr> <td>2%</td>	<td>reasonableness of <tt>README</tt> contents</td></tr>
+
+<tr> <td></td> </tr>
+<tr> <td></td>		<th align="left">Basic Functionality (35% total)</th></tr>
+<tr> <td>5%</td>	<td>correctly detects/reports bad arguments</td></tr>
+<tr> <td>5%</td>	<td>correctly detects/reports system call failures</td></tr>
+<tr> <td>5%</td>	<td>correctly changes console to character-at-a-time, 
+					no-echo mode</td></tr>
+<tr> <td>5%</td>	<td>correctly restores terminal modes on exit</td></tr>
+<tr> <td>5%</td>	<td>keyboard input echoed one character 
+					at a time</td></tr>
+<tr> <td>5%</td>	<td>keyboard input written to screen one character 
+					at a time</td></tr>
+<tr> <td>5%</td>	<td>correct <em>&lt;cr&gt;</em> and <em>&lt;lf&gt;</em> handling
+
+<tr> <td></td> </tr>
+<tr> <td></td>		<th align="left">--shell Functionality (50% total)</th></tr>
+<tr> <td>10%</td>	<td>forks a process and execs specified shell</td></tr>
+<tr> <td>10%</td>	<td>correctly passes keyboard input 
+					to screen or shell</td></tr>
+<tr> <td>10%</td>	<td>correctly passes output 
+					from shell to screen</td></tr>
+<tr> <td>5%</td>	<td>^D sends EOF to shell</td></tr>
+<tr> <td>5%</td>	<td>^C sends <tt>SIGINT</tt> to shell</td></tr>
+<tr> <td>5%</td>	<td>correct <em>&lt;cr&gt;</em> and <em>&lt;lf&gt;</em> handling
+<tr> <td>5%</td>	<td>report shell exit status on exit</td></tr>
+	
+</tbody></table>
+</div>
+</body>
+</html>
+
